@@ -2,9 +2,11 @@
 """Text-to-Speech narration generator.
 
 Supports multiple engines (tries in order):
-    1. system tts (/opt/hatch/bin/tts via Meta API) - primary, works offline-net
-    2. edge-tts (free, good quality) - if network allows
-    3. espeak (fallback, robotic)
+    1. edge-tts (free, Microsoft voices, ID + EN) - best quality
+    2. system tts (/opt/hatch/bin/tts) - for Muse environments
+    3. gTTS (Google, free) - fallback
+
+Setup for other users: pip install edge-tts gtts
 
 Usage:
     python3 narrate.py --text "Halo dunia" --voice id-ID-ArdiNeural \\
@@ -43,6 +45,12 @@ def narrate_system(text, voice, speed, output):
         "--output", output,
     ], check=True, capture_output=True)
 
+def narrate_gtts(text, output, lang="id"):
+    """Google TTS fallback."""
+    from gtts import gTTS
+    t = gTTS(text, lang=lang)
+    t.save(output)
+
 def check_edge_tts():
     try:
         import edge_tts
@@ -67,13 +75,28 @@ def narrate_segments(segments, voice, speed, output):
     for i, seg in enumerate(segments):
         part = os.path.join(tmpdir, f"part{i:03d}.mp3")
         text = seg["text"] if isinstance(seg, dict) else seg
-        try:
-            narrate_system(text, voice, speed, part)
-        except Exception:
-            if use_edge:
+        seg_done = False
+        if use_edge:
+            try:
                 narrate_edge(text, voice, speed, part)
-            else:
-                raise RuntimeError("No TTS engine available")
+                seg_done = True
+            except Exception:
+                pass
+        if not seg_done:
+            try:
+                narrate_system(text, voice, speed, part)
+                seg_done = True
+            except Exception:
+                pass
+        if not seg_done:
+            try:
+                lang = "id" if voice.startswith("id-") else "en"
+                narrate_gtts(text, part, lang)
+                seg_done = True
+            except Exception:
+                pass
+        if not seg_done:
+            raise RuntimeError("No TTS engine available")
         parts.append(part)
         pause = seg.get("pause_after", 0.5) if isinstance(seg, dict) else 0.5
         if pause > 0:
@@ -111,14 +134,31 @@ def main():
         narrate_segments(segs, a.voice, a.speed, a.output)
     else:
         text = a.text or open(a.file).read()
-        try:
-            narrate_system(text, a.voice, a.speed, a.output)
-        except Exception as e:
-            print(f"system tts failed ({e}), trying edge-tts", file=sys.stderr)
-            if check_edge_tts():
+        done = False
+        # 1. Try edge-tts
+        if check_edge_tts():
+            try:
                 narrate_edge(text, a.voice, a.speed, a.output)
-            else:
-                raise RuntimeError("No TTS engine available")
+                done = True
+            except Exception as e:
+                print(f"edge-tts failed ({e}), trying next", file=sys.stderr)
+        # 2. Try system tts
+        if not done:
+            try:
+                narrate_system(text, a.voice, a.speed, a.output)
+                done = True
+            except Exception as e:
+                print(f"system tts failed ({e}), trying next", file=sys.stderr)
+        # 3. Try gTTS
+        if not done:
+            try:
+                lang = "id" if a.voice.startswith("id-") else "en"
+                narrate_gtts(text, a.output, lang)
+                done = True
+            except Exception as e:
+                print(f"gTTS failed ({e})", file=sys.stderr)
+        if not done:
+            raise RuntimeError("No TTS engine available. Install: pip install edge-tts gtts")
         print(f"Done: {a.output}")
 
 if __name__ == "__main__":

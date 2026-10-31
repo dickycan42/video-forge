@@ -60,8 +60,16 @@ python3 full-build.py --script naskah.json --footage ./clips/ \
 ```
 
 ## Kebutuhan
-- Python 3.8+, ffmpeg 5.0+, Pillow
-- edge-tts (opsional): `pip install edge-tts`
+- Python 3.8+, ffmpeg 5.0+
+- `pip install Pillow edge-tts gtts`
+
+### Catatan TTS buat pengguna lain
+Modul `tts-narration` otomatis coba 3 engine berurutan:
+1. **edge-tts** (suara Microsoft, kualitas terbaik) — `pip install edge-tts`
+2. **system tts** (khusus environment Muse)
+3. **gTTS** (Google, fallback) — `pip install gtts`
+
+Di komputer biasa, edge-tts langsung jalan tanpa setup tambahan.
 
 ## Lisensi
 MIT
