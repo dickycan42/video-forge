@@ -52,7 +52,15 @@ Platform: `tiktok`, `shorts`, `reels`, `yt`, `square`, `fb-reels`, `fb`
 python3 thumb.py --title "JUDUL BESAR" --subtitle "sub" --output thumb.png
 ```
 
-### 7. ⭐ MASTER PIPELINE (`full-build.py`)
+### 7. Footage Finder (`footage-finder/`)
+Cari & download footage stok GRATIS via Pexels API (key gratis, daftar 1 menit di pexels.com/api).
+```bash
+export PEXELS_API_KEY="key-lu"
+python3 footage-finder/find.py --query "outer space" --per-page 5
+python3 footage-finder/find.py --query "ocean waves" --download --out ./clips/
+```
+
+### 8. ⭐ MASTER PIPELINE (`full-build.py`)
 **Satu perintah: naskah teks → video jadi.**
 ```bash
 python3 full-build.py --script naskah.json --footage ./clips/ \
