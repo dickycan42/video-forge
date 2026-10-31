@@ -2,8 +2,9 @@
 """Text-to-Speech narration generator.
 
 Supports multiple engines (tries in order):
-    1. edge-tts (free, good quality, ID + EN voices)
-    2. espeak (fallback, robotic)
+    1. system tts (/opt/hatch/bin/tts via Meta API) - primary, works offline-net
+    2. edge-tts (free, good quality) - if network allows
+    3. espeak (fallback, robotic)
 
 Usage:
     python3 narrate.py --text "Halo dunia" --voice id-ID-ArdiNeural \\
@@ -22,6 +23,26 @@ segments.json format:
 """
 import argparse, asyncio, json, os, subprocess, sys, tempfile
 
+def narrate_system(text, voice, speed, output):
+    """Use built-in /opt/hatch/bin/tts (Meta Shortwave API)."""
+    # Map voice names: id-ID-ArdiNeural -> avocado_v2:vg_id_m28 (ID male)
+    voice_map = {
+        "id-ID-ArdiNeural": "avocado_v2:vg_id_m28",
+        "id-ID-GadisNeural": "avocado_v2:vg_id_f28",
+    }
+    sys_voice = voice_map.get(voice, "avocado_v2:vg_id_m28")
+    # Detect language from voice
+    lang = "id" if voice.startswith("id-") else "en"
+    subprocess.run([
+        "/opt/hatch/bin/tts", "speak",
+        "--text", text,
+        "--voice", sys_voice,
+        "--language", lang,
+        "--speed", str(speed),
+        "--format", "mp3",
+        "--output", output,
+    ], check=True, capture_output=True)
+
 def check_edge_tts():
     try:
         import edge_tts
@@ -31,23 +52,12 @@ def check_edge_tts():
 
 async def edge_synthesize(text, voice, rate, output):
     import edge_tts
-    # rate: -50% to +50%, convert from speed percent (100 = normal)
     rate_str = f"+{rate-100}%" if rate >= 100 else f"{rate-100}%"
     comm = edge_tts.Communicate(text, voice, rate=rate_str)
     await comm.save(output)
 
 def narrate_edge(text, voice, speed, output):
     asyncio.run(edge_synthesize(text, voice, speed, output))
-
-def narrate_espeak(text, speed, output):
-    # espeak fallback: speed in wpm (175 = normal)
-    wpm = int(175 * speed / 100)
-    wav_tmp = output + ".tmp.wav"
-    subprocess.run(["espeak", "-v", "id", "-s", str(wpm),
-                    "-w", wav_tmp, text], check=True)
-    subprocess.run(["ffmpeg", "-y", "-i", wav_tmp, "-c:a", "libmp3lame",
-                    output], check=True, capture_output=True)
-    os.remove(wav_tmp)
 
 def narrate_segments(segments, voice, speed, output):
     """Synthesize each segment separately, join with pauses."""
@@ -57,10 +67,13 @@ def narrate_segments(segments, voice, speed, output):
     for i, seg in enumerate(segments):
         part = os.path.join(tmpdir, f"part{i:03d}.mp3")
         text = seg["text"] if isinstance(seg, dict) else seg
-        if use_edge:
-            narrate_edge(text, voice, speed, part)
-        else:
-            narrate_espeak(text, speed, part)
+        try:
+            narrate_system(text, voice, speed, part)
+        except Exception:
+            if use_edge:
+                narrate_edge(text, voice, speed, part)
+            else:
+                raise RuntimeError("No TTS engine available")
         parts.append(part)
         pause = seg.get("pause_after", 0.5) if isinstance(seg, dict) else 0.5
         if pause > 0:
@@ -98,11 +111,14 @@ def main():
         narrate_segments(segs, a.voice, a.speed, a.output)
     else:
         text = a.text or open(a.file).read()
-        if check_edge_tts():
-            narrate_edge(text, a.voice, a.speed, a.output)
-        else:
-            print("edge-tts not found, using espeak fallback", file=sys.stderr)
-            narrate_espeak(text, a.speed, a.output)
+        try:
+            narrate_system(text, a.voice, a.speed, a.output)
+        except Exception as e:
+            print(f"system tts failed ({e}), trying edge-tts", file=sys.stderr)
+            if check_edge_tts():
+                narrate_edge(text, a.voice, a.speed, a.output)
+            else:
+                raise RuntimeError("No TTS engine available")
         print(f"Done: {a.output}")
 
 if __name__ == "__main__":
