@@ -38,8 +38,10 @@ def main():
     voice_dur = probe_duration(a.voice)
     inputs = ["-i", a.voice]
     fc_parts = []
-    amix_inputs = ["[0:a]loudnorm=I=-14:TP=-1.5:LRA=11[voice]"]
+    amix_inputs = ["[voice]"]
 
+    # Normalize voice first
+    fc_parts.append("[0:a]loudnorm=I=-14:TP=-1.5:LRA=11[voice]")
     idx = 1
     if a.music:
         inputs += ["-stream_loop", "-1", "-i", a.music]
@@ -53,12 +55,16 @@ def main():
         amix_inputs.append("[sfx]")
         idx += 1
 
-    # Mix all (longest = voice duration via -shortest)
-    n = len(amix_inputs)
-    fc_parts.append(
-        f"{''.join(amix_inputs)}amix=inputs={n}:duration=shortest:dropout_transition=0[mixed]")
-    # Final loudnorm on mixed output
-    fc_parts.append("[mixed]loudnorm=I=-14:TP=-1.5:LRA=11[out]")
+    # Mix all tracks, or just use voice if solo
+    if len(amix_inputs) == 1:
+        # Voice only: no mixing needed
+        fc_parts = ["[0:a]loudnorm=I=-14:TP=-1.5:LRA=11[out]"]
+    else:
+        n = len(amix_inputs)
+        fc_parts.append(
+            f"{''.join(amix_inputs)}amix=inputs={n}:duration=shortest:dropout_transition=0[mixed]")
+        # Final loudnorm on mixed output
+        fc_parts.append("[mixed]loudnorm=I=-14:TP=-1.5:LRA=11[out]")
 
     cmd = (["ffmpeg", "-y"] + inputs +
            ["-filter_complex", ";".join(fc_parts),
