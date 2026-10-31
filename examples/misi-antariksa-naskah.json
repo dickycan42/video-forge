@@ -1,0 +1,15 @@
+{
+    "voice": "id-ID-ArdiNeural",
+    "speed": 95,
+    "watermark": "@theviralvault71",
+    "title": "Misi Antariksa: Pendaratan di Planet Baru",
+    "segments": [
+        {"text": "Tahun 2087. Bumi sekarat.", "pause_after": 0.5},
+        {"text": "Pesawat induk Ark Horizon diluncurkan. Misi: mencari planet yang bisa dihuni manusia.", "pause_after": 0.5},
+        {"text": "Melewati nebula ungu, menembus sabuk asteroid...", "pause_after": 0.4},
+        {"text": "Mereka menemukan planet biru. Mirip Bumi, tapi berbeda.", "pause_after": 0.5},
+        {"text": "Ark Horizon turun menembus atmosfer.", "pause_after": 0.4},
+        {"text": "Air terjun raksasa. Gunung menjulang. Hutan hijau. Danau jernih. Lautan luas.", "pause_after": 0.5},
+        {"text": "Pendaratan sempurna. Apakah ini rumah baru umat manusia?", "pause_after": 0.8}
+    ]
+}
