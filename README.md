@@ -60,7 +60,15 @@ python3 footage-finder/find.py --query "outer space" --per-page 5
 python3 footage-finder/find.py --query "ocean waves" --download --out ./clips/
 ```
 
-### 8. ⭐ MASTER PIPELINE (`full-build.py`)
+### 8. Video Generator (`video-generator/`)
+Generate video dari prompt teks via Hugging Face API (gratis, butuh token gratis).
+```bash
+export HF_TOKEN="hf_..."  # gratis di huggingface.co
+python3 video-generator/generate.py --prompt "a spaceship flying through nebula" --output clip.mp4
+```
+Catatan: free tier lambat (5-15 mnt/klip). Untuk hasil cepat, pakai `footage-finder/`.
+
+### 9. ⭐ MASTER PIPELINE (`full-build.py`)
 **Satu perintah: naskah teks → video jadi.**
 ```bash
 python3 full-build.py --script naskah.json --footage ./clips/ \
