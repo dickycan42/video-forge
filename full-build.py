@@ -27,7 +27,7 @@ Steps:
 import argparse, json, os, subprocess, sys, tempfile
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-REPO = os.path.dirname(BASE)
+REPO = BASE
 
 def run(cmd, desc):
     print(f"  [{desc}] {' '.join(cmd[:4])}...")
